@@ -17,7 +17,7 @@ DECLARE @get_sql_handle VARBINARY(64);
 	-- ex)USE sales
 -- ②今回対象となるSQLハンドル
 
-	SET @get_sql_handle = 0x020000001047F305C109E4FDA567AAF530C276698A8EFA4E0000000000000000000000000000000000000000 
+	SET @get_sql_handle =  0x02000000962E9C1112DB0C4263611A06B91AEC49B35B91890000000000000000000000000000000000000000
 						-- ↑ここに調査対象のSQLハンドルを入力
 
 -- =========================================================
@@ -80,24 +80,24 @@ WHERE
 -- ============================================================
 -- 不要な一時テーブルを削除
 -- ============================================================
-DROP TABLE #No_01;
-DROP TABLE #REF_TABLE_COLUMN ;
-DROP TABLE #REF_TABLE_COLUMN_LIST ;
-DROP TABLE #No_02_01	;
-DROP TABLE #No_02_02_01	;
-DROP TABLE #No_02_02	;
-DROP TABLE #No_02_03	;
-DROP TABLE #STATS;
-DROP TABLE #STATS_HEADER_TEMP;
-DROP TABLE #STATS_DENSITY_TEMP;
-DROP TABLE #STATS_HISTOGRAM_TEMP;
-DROP TABLE #STATS_HEADER;
-DROP TABLE #STATS_DENSITY;
-DROP TABLE #STATS_HISTOGRAM;
-DROP TABLE #No_04_01;
-DROP TABLE #No_04_02;
-DROP TABLE #No_04_03;
-
+IF OBJECT_ID(N'tempdb..#No_01' , N'U') IS NOT NULL DROP TABLE #No_01;
+IF OBJECT_ID(N'tempdb..#REF_TABLE_COLUMN' , N'U') IS NOT NULL DROP TABLE #REF_TABLE_COLUMN ;
+IF OBJECT_ID(N'tempdb..#REF_TABLE_COLUMN_LIST' , N'U') IS NOT NULL DROP TABLE #REF_TABLE_COLUMN_LIST ;
+IF OBJECT_ID(N'tempdb..#No_02_01' , N'U') IS NOT NULL DROP TABLE #No_02_01	;
+IF OBJECT_ID(N'tempdb..#No_02_02_01' , N'U') IS NOT NULL DROP TABLE #No_02_02_01	;
+IF OBJECT_ID(N'tempdb..#No_02_02' , N'U') IS NOT NULL DROP TABLE #No_02_02	;
+IF OBJECT_ID(N'tempdb..#No_02_03' , N'U') IS NOT NULL DROP TABLE #No_02_03	;
+IF OBJECT_ID(N'tempdb..#STATS' , N'U') IS NOT NULL DROP TABLE #STATS;
+IF OBJECT_ID(N'tempdb..#STATS_HEADER_TEMP' , N'U') IS NOT NULL DROP TABLE #STATS_HEADER_TEMP;
+IF OBJECT_ID(N'tempdb..#STATS_DENSITY_TEMP' , N'U') IS NOT NULL DROP TABLE #STATS_DENSITY_TEMP;
+IF OBJECT_ID(N'tempdb..#STATS_HISTOGRAM_TEMP' , N'U') IS NOT NULL DROP TABLE #STATS_HISTOGRAM_TEMP;
+IF OBJECT_ID(N'tempdb..#STATS_HEADER' , N'U') IS NOT NULL DROP TABLE #STATS_HEADER;
+IF OBJECT_ID(N'tempdb..#STATS_DENSITY' , N'U') IS NOT NULL DROP TABLE #STATS_DENSITY;
+IF OBJECT_ID(N'tempdb..#STATS_HISTOGRAM' , N'U') IS NOT NULL DROP TABLE #STATS_HISTOGRAM;
+IF OBJECT_ID(N'tempdb..#No_04_01' , N'U') IS NOT NULL DROP TABLE #No_04_01;
+IF OBJECT_ID(N'tempdb..#No_04_02' , N'U') IS NOT NULL DROP TABLE #No_04_02;
+IF OBJECT_ID(N'tempdb..#No_04_03' , N'U') IS NOT NULL DROP TABLE #No_04_03;
+IF OBJECT_ID(N'tempdb..#No_06_01' , N'U') IS NOT NULL DROP TABLE #No_06_01;
 
 -- ============================================================
 -- 抽出したxmlプランを一時テーブルから取り出して処理するための変数
@@ -531,7 +531,7 @@ WHILE @@FETCH_STATUS = 0
 
 BEGIN
 -- No_02_02.index info
-	SET @index_exec_sql		= REPLACE(@index_exec_sql	,'temp_@objname' , @objname)	
+	SET @index_exec_sql		= REPLACE(@index_exec_sql	,'temp_@objname' , @Schema + '.' + @objname)	
 	;
 	EXEC (@index_exec_sql	);
 
@@ -649,14 +649,14 @@ WITH Index_temp_01 AS (
 								ELSE ''
 							END	AS IS_INCLUDED_COLUMN
 
-						FROM		SYS.INDEXES T1
-						INNER JOIN	SYS.INDEX_COLUMNS T2
+						FROM		sys.indexes T1
+						INNER JOIN	sys.index_columns T2
 							ON	T1.OBJECT_ID = T2.OBJECT_ID
 							AND	T1.INDEX_ID	 = T2.INDEX_ID
-						INNER JOIN	SYS.COLUMNS T3
+						INNER JOIN	sys.columns T3
 							ON	T2.OBJECT_ID = T3.OBJECT_ID
 							AND	T2.COLUMN_ID = T3.COLUMN_ID
-						INNER JOIN	SYS.TABLES T4
+						INNER JOIN	sys.tables T4
 							ON	T1.OBJECT_ID = T4.OBJECT_ID
 						
 						)
@@ -955,12 +955,39 @@ SELECT * FROM #REF_TABLE_COLUMN_LIST
 SELECT * FROM #No_04_01;
 SELECT * FROM #No_04_02;
 SELECT * FROM #No_04_03;
-
+*/
 
 
 /**********************************************************/
 -- 06_選択したsql_handleと類似内容のクエリを持つSQLの一回あたりの動的管理ビュー
 /**********************************************************/
+CREATE TABLE #No_06_01(
+						[Avarage_elapsed_time(ms)]			BIGINT			NULL,
+						[Avarage_worker_time(ms)]			BIGINT			NULL,
+						[Avarage_physical_reads_count]		BIGINT			NULL,
+						[Avarage_logical_reads_count]		BIGINT			NULL,
+						[Avarage_logical_writes_count]		BIGINT			NULL,
+						[total_elapsed_time(ms)]			BIGINT			NULL,
+						[total_worker_time(ms)]				BIGINT			NULL,
+						[total_wait_time(ms)]				BIGINT			NULL,
+						[total_physical_reads(8k_page)]		BIGINT			NULL,
+						[total_logical_reads(8k_page)]		BIGINT			NULL,
+						[total_logical_writes(8k_page)]		BIGINT			NULL,
+						[execution_count]					BIGINT			NULL,
+						[total_rows]						BIGINT			NULL,
+						[last_rows]							BIGINT			NULL,
+						[min_rows]							BIGINT			NULL,
+						[max_rows]							BIGINT			NULL,
+						[plan_generation_num]				BIGINT			NULL,
+						[creation_time]						DATETIME		NULL,
+						[last_execution_time]				DATETIME		NULL,
+						[db_name]							SYSNAME			NULL,
+						[statement_text]					NVARCHAR(MAX)	NULL,
+						[batch_text]						NVARCHAR(MAX)	NULL,
+						[query_plan]						XML				NULL
+						)	;
+
+INSERT INTO #No_06_01
 SELECT 
 	[total_elapsed_time] / [execution_count] / 1000.0					AS [Average Elapsed Time (ms)]			, 
 	[total_worker_time]  / [execution_count] / 1000.0					AS [Average Worker Time (ms)]			, 
@@ -1003,7 +1030,7 @@ WHERE [query_hash] IN (SELECT
 						WHERE sql_handle = @get_sql_handle
 						)
 OPTION (RECOMPILE)
-*/
+
 /*********************************************************/
 -- OUTOUT report
 /*********************************************************/
@@ -1293,16 +1320,264 @@ PRINT '</table>'
 -- ============================================================
 -- report No_04
 -- ============================================================
+PRINT '<a name="No_02">インデックス情報</a>'
+PRINT '<h2>インデックス情報</h2>'
+PRINT '<table>'
+PRINT '<tr>'
+PRINT '<th>No</th>'
+PRINT '<th>Table</th>'
+PRINT '<th>Column</th>'
+PRINT '<th>PK</th>'
+PRINT '<th>IX1</th>'
+PRINT '<th>IX2</th>'
+PRINT '<th>IX3</th>'
+PRINT '<th>IX4</th>'
+PRINT '<th>IX5</th>'
+PRINT '<th>IX6</th>'
+PRINT '<th>IX7</th>'
+PRINT '<th>IX8</th>'
+PRINT '<th>IX9</th>'
+PRINT '<th>IX10</th>'
+PRINT '<th>IX11</th>'
+PRINT '<th>IX12</th>'
+PRINT '<th>IX13</th>'
+PRINT '<th>IX14</th>'
+PRINT '<th>IX15</th>'
+
+SELECT '<tr>' +
+       '<td class="r">' 
+			   + CONVERT(NVARCHAR,ROW_NUMBER() OVER (ORDER BY [Table]))									+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,[Table]								),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,[Column]								),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,PK										),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX1									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX2									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX3									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX4									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX5									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX6									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX7									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX8									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX9									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX10									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX11									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX12									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX13									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX14									),'NULL')				+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,IX15									),'NULL')				+ '</td>'	,
+		'</tr>'
+	FROM #No_04_01
+PRINT '</table>'
+
+PRINT '<h2>不足しているインデックス</h2>'
+PRINT '<table>'
+PRINT '<tr>'
+PRINT '<th>No</th>'
+PRINT '<th>Database</th>'				
+PRINT '<th>Table</th>'					
+PRINT '<th>avg_user_impact</th>'		
+PRINT '<th>avg_total_user_cost</th>'	
+PRINT '<th>equality_columns</th>'		
+PRINT '<th>inequality_columns</th>'	
+PRINT '<th>included_columns</th>'		
+PRINT '<th>user_seeks</th>'			
+PRINT '<th>last_user_seek</th>'		
+PRINT '<th>user_scans</th>'			
+PRINT '<th>last_user_scan</th>'		
+PRINT '<th>statement</th>'				
+
+SELECT '<tr>' +
+       '<td class="r">' 
+			   + CONVERT(NVARCHAR,ROW_NUMBER() OVER (ORDER BY [Database]))							+ '</td>'	,
+		'<td>' + ISNULL(CONVERT(NVARCHAR,[Database]							),'NULL')				+ '</td>'	,				
+		'<td>' + ISNULL(CONVERT(NVARCHAR,[Table]							),'NULL')				+ '</td>'	,					
+		'<td>' + ISNULL(CONVERT(NVARCHAR,avg_user_impact					),'NULL')				+ '</td>'	,		
+		'<td>' + ISNULL(CONVERT(NVARCHAR,avg_total_user_cost				),'NULL')				+ '</td>'	,	
+		'<td>' + ISNULL(CONVERT(NVARCHAR,equality_columns					),'NULL')				+ '</td>'	,		
+		'<td>' + ISNULL(CONVERT(NVARCHAR,inequality_columns					),'NULL')				+ '</td>'	,	
+		'<td>' + ISNULL(CONVERT(NVARCHAR,included_columns					),'NULL')				+ '</td>'	,		
+		'<td>' + ISNULL(CONVERT(NVARCHAR,user_seeks							),'NULL')				+ '</td>'	,			
+		'<td>' + ISNULL(CONVERT(NVARCHAR,last_user_seek						),'NULL')				+ '</td>'	,		
+		'<td>' + ISNULL(CONVERT(NVARCHAR,user_scans							),'NULL')				+ '</td>'	,			
+		'<td>' + ISNULL(CONVERT(NVARCHAR,last_user_scan						),'NULL')				+ '</td>'	,		
+		'<td>' + ISNULL(CONVERT(NVARCHAR,statement							),'NULL')				+ '</td>'	,				
+		'</tr>'
+	FROM #No_04_02
+PRINT '</table>'
+
+
+PRINT '<h2>インデックス使用状況の取得</h2>'
+PRINT '<table>'
+PRINT '<tr>'
+PRINT '<th>No</th>'
+PRINT '<th>DB_name</th>'						
+PRINT '<th>Schema_name</th>'					
+PRINT '<th>Table_name</th>'					
+PRINT '<th>Index_name</th>'					
+PRINT '<th>Index_type</th>'					
+PRINT '<th>alloc_unit_type_desc</th>'			
+PRINT '<th>page_count</th>'					
+PRINT '<th>avg_fragmentation_in_percent</th>'	
+PRINT '<th>Condition</th>'						
+PRINT '<th>index_id</th>'						
+PRINT '<th>Index_column</th>'					
+PRINT '<th>Index_column(include)</th>'			
+PRINT '<th>partition_number</th>'				
+PRINT '<th>data_compression_desc</th>'			
+PRINT '<th>reserved_page_count</th>'			
+PRINT '<th>row_count</th>'						
+PRINT '<th>user_seeks</th>'					
+PRINT '<th>last_user_seek</th>'				
+PRINT '<th>user_scans</th>'					
+PRINT '<th>last_user_scan</th>'				
+PRINT '<th>user_lookups</th>'					
+PRINT '<th>last_user_lookup</th>'				
+PRINT '<th>leaf_insert_count</th>'				
+PRINT '<th>leaf_delete_count</th>'				
+PRINT '<th>leaf_ghost_count</th>'				
+PRINT '<th>leaf_update_count</th>'				
+PRINT '<th>page_io_latch_wait_count</th>'		
+PRINT '<th>page_io_latch_wait_in_ms</th>'		
+PRINT '<th>page_latch_wait_count</th>'			
+PRINT '<th>page_latch_wait_in_ms</th>'			
+PRINT '<th>row_lock_count</th>'				
+PRINT '<th>row_lock_wait_count</th>'			
+PRINT '<th>row_lock_wait_in_ms</th>'			
+PRINT '<th>page_lock_count</th>'				
+PRINT '<th>page_lock_wait_count</th>'			
+PRINT '<th>page_lock_wait_in_ms</th>'			
+PRINT '<th>Stats_name</th>'					
+PRINT '<th>Stats_date</th>'					
+PRINT '<th>auto_created</th>'					
+PRINT '<th>user_created</th>'					
+PRINT '<th>no_recompute</th>'					
+PRINT '<th>create_date</th>'					
+PRINT '<th>modify_date</th>'					
+SELECT '<tr>' +
+       '<td class="r">' 
+			   + CONVERT(NVARCHAR,ROW_NUMBER() OVER (ORDER BY [DB_name]))										+ '</td>'	,
+			    '<td>' + ISNULL(CONVERT(NVARCHAR,[DB_name]								),'NULL')				+ '</td>'	,						
+				'<td>' + ISNULL(CONVERT(NVARCHAR,[Schema_name]							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Table_name								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Index_name								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Index_type								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,alloc_unit_type_desc					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_count								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,avg_fragmentation_in_percent			),'NULL')				+ '</td>'	,	
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Condition								),'NULL')				+ '</td>'	,						
+				'<td>' + ISNULL(CONVERT(NVARCHAR,index_id								),'NULL')				+ '</td>'	,						
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Index_column							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,[Index_column(include)]				),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,partition_number						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,data_compression_desc					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,reserved_page_count					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,row_count								),'NULL')				+ '</td>'	,						
+				'<td>' + ISNULL(CONVERT(NVARCHAR,user_seeks								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,last_user_seek							),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,user_scans								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,last_user_scan							),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,user_lookups							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,last_user_lookup						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,leaf_insert_count						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,leaf_delete_count						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,leaf_ghost_count						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,leaf_update_count						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_io_latch_wait_count				),'NULL')				+ '</td>'	,		
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_io_latch_wait_in_ms				),'NULL')				+ '</td>'	,		
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_latch_wait_count					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_latch_wait_in_ms					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,row_lock_count							),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,row_lock_wait_count					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,row_lock_wait_in_ms					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_lock_count						),'NULL')				+ '</td>'	,				
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_lock_wait_count					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,page_lock_wait_in_ms					),'NULL')				+ '</td>'	,			
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Stats_name								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,Stats_date								),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,auto_created							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,user_created							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,no_recompute							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,create_date							),'NULL')				+ '</td>'	,					
+				'<td>' + ISNULL(CONVERT(NVARCHAR,modify_date							),'NULL')				+ '</td>'	,					
+			'</tr>'
+	FROM #No_04_03
+PRINT '</table>'
+				
 
 -- ============================================================
--- report No_05
+-- 未作成_report No_05
 -- ============================================================
+/*
+PRINT '<a name="No_02">定義</a>'
+PRINT '<h2>テーブル定義</h2>'
+PRINT '<table>'
+PRINT '<tr>'
+PRINT '<th>No</th>'
+
+*/
+
 
 -- ============================================================
 -- report No_06
 -- ============================================================
+PRINT '<a name="No_02">動的管理ビュー</a>'
+PRINT '<h2>DMV</h2>'
+PRINT '<table>'
+PRINT '<tr>'
+PRINT '<th>No</th>'
+PRINT '<th>Avarage_elapsed_time(ms)</th>'		
+PRINT '<th>Avarage_worker_time(ms)</th>'		
+PRINT '<th>Avarage_physical_reads_count</th>'	
+PRINT '<th>Avarage_logical_reads_count</th>'	
+PRINT '<th>Avarage_logical_writes_count</th>'	
+PRINT '<th>total_elapsed_time(ms)</th>'		
+PRINT '<th>total_worker_time(ms)</th>'			
+PRINT '<th>total_wait_time(ms)</th>'			
+PRINT '<th>total_physical_reads(8k_page)</th>'	
+PRINT '<th>total_logical_reads(8k_page)</th>'	
+PRINT '<th>total_logical_writes(8k_page)</th>'	
+PRINT '<th>execution_count</th>'				
+PRINT '<th>total_rows</th>'					
+PRINT '<th>last_rows</th>'						
+PRINT '<th>min_rows</th>'						
+PRINT '<th>max_rows</th>'						
+PRINT '<th>plan_generation_num</th>'			
+PRINT '<th>creation_time</th>'					
+PRINT '<th>last_execution_time</th>'			
+PRINT '<th>db_name</th>'						
+PRINT '<th>statement_text</th>'				
+PRINT '<th>batch_text</th>'					
+PRINT '<th>query_plan</th>'					
 
-
+SELECT '<tr>' +
+       '<td class="r">' 
+			   + CONVERT(NVARCHAR,ROW_NUMBER() OVER (ORDER BY [creation_time]))										+ '</td>'	,
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[Avarage_elapsed_time(ms)]							),'NULL')				+ '</td>'	,		
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[Avarage_worker_time(ms)]							),'NULL')				+ '</td>'	,		
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[Avarage_physical_reads_count]						),'NULL')				+ '</td>'	,	
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[Avarage_logical_reads_count]						),'NULL')				+ '</td>'	,	
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[Avarage_logical_writes_count]						),'NULL')				+ '</td>'	,	
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_elapsed_time(ms)]							),'NULL')				+ '</td>'	,		
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_worker_time(ms)]							),'NULL')				+ '</td>'	,			
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_wait_time(ms)]								),'NULL')				+ '</td>'	,			
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_physical_reads(8k_page)]					),'NULL')				+ '</td>'	,	
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_logical_reads(8k_page)]						),'NULL')				+ '</td>'	,	
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_logical_writes(8k_page)]					),'NULL')				+ '</td>'	,	
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[execution_count]									),'NULL')				+ '</td>'	,				
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[total_rows]										),'NULL')				+ '</td>'	,					
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[last_rows]										),'NULL')				+ '</td>'	,						
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[min_rows]											),'NULL')				+ '</td>'	,						
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[max_rows]											),'NULL')				+ '</td>'	,						
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[plan_generation_num]								),'NULL')				+ '</td>'	,			
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[creation_time]									),'NULL')				+ '</td>'	,					
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[last_execution_time]								),'NULL')				+ '</td>'	,			
+        '<td>' + ISNULL(CONVERT(NVARCHAR,[db_name]											),'NULL')				+ '</td>'	,						
+        '<td>' + ISNULL(CONVERT(NVARCHAR(MAX),[statement_text]								),'NULL')				+ '</td>'	,				
+        '<td>' + ISNULL(CONVERT(NVARCHAR(MAX),[batch_text]									),'NULL')				+ '</td>'	,					
+        '<td>' + ISNULL(CONVERT(NVARCHAR(MAX),[query_plan]									),'NULL')				+ '</td>'	,					
+	'</tr>'
+	FROM #No_06_01
+PRINT '</table>'
 
 
 /**********************************************************/
